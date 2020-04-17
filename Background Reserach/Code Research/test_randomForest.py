@@ -1,36 +1,16 @@
-import nltk
-from nltk.corpus import stopwords
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 import pandas as pd
-from nltk.stem.wordnet import WordNetLemmatizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.ensemble import RandomForestClassifier
 
-punct =['.',',',';',':','!','\'', '?', '"', '(', ')', '[', ']', '<', '>', '\\', '/']
-english_stop_words = stopwords.words('english')
+import matplotlib.pyplot as plt
+import time
+import error_stats
+from preprocess import preprocess
+
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
-lemmatizer = nltk.stem.WordNetLemmatizer()
-def get_list_tokens(string):
-	sentence_split = nltk.tokenize.sent_tokenize(string)
-	list_tokens = []
-	for sentence in sentence_split:
-		list_tokens_sentence = nltk.tokenize.word_tokenize(sentence)
-		for token in list_tokens_sentence:
-			list_tokens.append(lemmatizer.lemmatize(token).lower())
 
-	return list_tokens
+t0 = time.time()
 
-def remove_stop_words(list_tokens):
-	clean_list_tokens = []
-	for token in list_tokens:
-		if token not in english_stop_words:
-			clean_list_tokens.append(token)
-
-	return clean_list_tokens
-
-def remove_punct(list_tokens):
-	no_punct = [i for i in list_tokens if i not in punct]
-	return no_punct
 stats_all = []
 for word in words:
 	print(word)
@@ -49,20 +29,8 @@ for word in words:
 						names=['label'])
 	train = pd.merge(train_text, train_label, left_index=True, right_index=True)
 	test = pd.merge(test_text, test_label, left_index=True, right_index=True)
-	for i in range(0,1):
-		# print(train.sentence[i])
-		sentence_tokens = get_list_tokens(train.sentence[i])
-		rm_st = remove_stop_words(sentence_tokens)
-		rm_punct = remove_punct(rm_st)
-		train.at[i,'sentence'] = ' '.join(rm_punct)
-		# print(train.sentence[i])
-	for i in range(0,1):
-		# print(test.sentence[i])
-		sentence_tokens = get_list_tokens(test.sentence[i])
-		rm_st = remove_stop_words(sentence_tokens)
-		rm_punct = remove_punct(rm_st)
-		test.at[i,'sentence'] = ' '.join(rm_punct)
-		# print(test.sentence[i])
+	train['sentence'] = preprocess(train)
+	test['sentence'] = preprocess(test)
 
 	list_rows = train['sentence'].tolist()
 	vectorizer = CountVectorizer()
@@ -76,12 +44,16 @@ for word in words:
 	Y = vectorizer.transform(test_rows)
 	Y = Y.toarray()
 	prediction = forest.predict(Y)
-	accuracy = accuracy_score(test.label, prediction)
-	precision, recall, fscore, support = precision_recall_fscore_support(test.label, prediction, average='macro')
-	stats = [accuracy, precision, recall, fscore]
+
+	# get the confusion matrix
+	ax = error_stats.format_conf_matrix(train, test, prediction, word, words)
+	# get stats (accuracy, precision etc)
+	stats = error_stats.get_stats(test.label, prediction)
 	stats_all.append(stats)
-	print(word)
-	print(accuracy)
+
+t1 = time.time()
+print('Time it took: {}'.format(t1-t0))
 
 df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
 print(df)
+plt.show()
