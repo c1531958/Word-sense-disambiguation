@@ -1,9 +1,11 @@
 import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.utils import class_weight
 
 import error_stats
 from preprocess import preprocess
@@ -33,6 +35,11 @@ for word in words:
     # merge train date with labels data in one table
     train = pd.merge(train_text, train_label, left_index=True, right_index=True)
     test = pd.merge(test_text, test_label, left_index=True, right_index=True)
+
+    # get class weights
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                      np.unique(train.label),
+                                                      train.label)
 
     # if there are enough training samples, even the label ratios out
     if train.shape[0] > 1000:

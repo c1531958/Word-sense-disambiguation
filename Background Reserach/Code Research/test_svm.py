@@ -5,6 +5,8 @@ from sklearn import svm
 import time
 import error_stats
 from preprocess import preprocess
+from select_sample import training_sample
+
 import matplotlib.pyplot as plt
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
@@ -31,11 +33,15 @@ for word in words:
 	train['sentence'] = preprocess(train)
 	test['sentence'] = preprocess(test)
 
+	# if there are enough training samples, even the label ratios out
+	if train.shape[0] > 1000:
+		 train = training_sample(train)
+
 	list_rows = train['sentence'].tolist()
 	vectorizer = TfidfVectorizer(max_features=1000)
 	X = vectorizer.fit_transform(list_rows)
 	X = X.toarray()
-	SVM_analysis = svm.SVC(C=1.0, kernel='linear', degree=3, gamma='auto')
+	SVM_analysis = svm.SVC(C=1.0, kernel='linear', degree=3, gamma='auto', class_weight='balanced')
 	SVM_analysis.fit(X,train.label)
 
 	prediction = []
