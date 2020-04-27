@@ -14,8 +14,6 @@ from sklearn.utils import class_weight
 import error_stats
 from preprocess import preprocess
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-
 word2vec = api.load('word2vec-google-news-300')
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
@@ -69,16 +67,6 @@ for word in words:
 
     X_ = tokenizer.texts_to_sequences(train['sentence'].values)
     X_ = pad_sequences(X_, maxlen=MAX_SEQUENCE_LENGTH)
-    vectorizer = TfidfVectorizer(max_features=train.sentence.map(len).max() - 100)
-    X = vectorizer.fit(list_rows)
-    ############################################
-    b = np.rint(np.sort(X.transform(list_rows).toarray()*100))
-    X = X.transform(list_rows)
-    c = []
-    for i in range(len(list_rows)):
-        c.append(np.nonzero(X[i])[1])
-    X = pad_sequences(c, maxlen=MAX_SEQUENCE_LENGTH)
-#######################################################
 
     X_test = tokenizer.texts_to_sequences(test['sentence'].values)
     X_test = pad_sequences(X_test, maxlen=MAX_SEQUENCE_LENGTH)
@@ -87,7 +75,6 @@ for word in words:
 
     model = Sequential()
     model.add(Embedding(len(embedding_matrix), 300,  weights=[embedding_matrix]))
-    # model.add(Embedding(2000, 300))
     model.add(SpatialDropout1D(0.2))
     model.add(Bidirectional(LSTM(100, dropout=0.2, recurrent_dropout=0.2)))
     model.add(Dense(label_types, activation='softmax'))
@@ -96,7 +83,7 @@ for word in words:
     epochs = 30
     batch_size = 30
 
-    history = model.fit(X, pd.get_dummies(train['label']).values, #pd.get_dummies(train['label']).values
+    history = model.fit(X_, pd.get_dummies(train['label']).values,
                         class_weight=class_weights,
                         epochs=epochs,
                         batch_size=batch_size,
@@ -113,11 +100,10 @@ for word in words:
     # get stats (accuracy, precision etc)
     stats = error_stats.get_stats(test.label, prediction)
     stats_all.append(stats)
-    break
 
 t1 = time.time()
 
 print('Time it took: {}'.format(t1-t0))
-df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
+df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore', 'rmse'], index=words)
 print(df)
 plt.show()
