@@ -10,14 +10,17 @@ from sklearn.neighbors import KNeighborsClassifier
 import error_stats
 from preprocess import preprocess
 from select_sample import training_sample
-# import gensim.downloader as api
+import gensim.downloader as api
 
 stats_all = []
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
-# model2 = api.load('word2vec-google-news-300')
+
 
 t0 = time.time()
+model2 = api.load('word2vec-google-news-300')
+t1 = time.time()
+print(t1-t0)
 
 
 def convertTow2v(list_tokens, selected_features, w2v_vector):

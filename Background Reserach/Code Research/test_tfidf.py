@@ -6,15 +6,19 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.utils import class_weight
+from sklearn.metrics import plot_confusion_matrix
 
 import error_stats
 from preprocess import preprocess
 from select_sample import training_sample
 
+from sklearn.utils import class_weight
+
+
 stats_all = []
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
-
+words=['pitcher']
 t0 = time.time()
 
 for word in words:
@@ -37,9 +41,10 @@ for word in words:
     test = pd.merge(test_text, test_label, left_index=True, right_index=True)
 
     # get class weights
-    class_weights = class_weight.compute_class_weight('balanced',
-                                                      np.unique(train.label),
-                                                      train.label)
+    # class_weights = class_weight.compute_class_weight('balanced',
+    #                                                   np.unique(train.label),
+    #                                                   train.label)
+    # print(class_weights)
 
     # if there are enough training samples, even the label ratios out
     if train.shape[0] > 1000:
@@ -58,6 +63,11 @@ for word in words:
 
     # fit only
     X = vectorizer.fit(list_rows)
+
+    # get class weights
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                      np.unique(train.label),
+                                                      train.label)
 
     knn = KNeighborsClassifier(n_neighbors=3)
     knn.fit(X.transform(list_rows).todense(), train.label)

@@ -2,8 +2,10 @@ import itertools
 
 import matplotlib.pyplot as plt
 import numpy as np
+from math import sqrt
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import mean_squared_error
 
 TEXT_FONT_SIZE = 'medium'
 fig = plt.figure(figsize=(30, 30))
@@ -46,7 +48,8 @@ def get_stats(test_label, pred_label):
     accuracy = accuracy_score(test_label, pred_label)
     precision, recall, fscore, support = precision_recall_fscore_support(test_label, pred_label, average='macro',
                                                                          zero_division=0)
-    stats = [accuracy, precision, recall, fscore]
+    rms = sqrt(mean_squared_error(test_label, pred_label))
+    stats = [accuracy, precision, recall, fscore, rms]
     print(accuracy)
 
     return stats
