@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import svm
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 
 import time
 import error_stats
@@ -59,6 +61,6 @@ for word in words:
 t1 = time.time()
 print('Time it took: {}'.format(t1 - t0))
 
-df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
+df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore', 'rmse'], index=words)
 print(df)
 plt.show()
