@@ -1,104 +1,78 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.wordnet import WordNetLemmatizer
-import pandas as pd
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from sklearn.neighbors import KNeighborsClassifier
+import time
 
-punct =['.',',',';',':','!','\'', '?', '"', '(', ')', '[', ']', '<', '>', '\\', '/']
-english_stop_words = stopwords.words('english')
-lemmatizer = nltk.stem.WordNetLemmatizer()
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.utils import class_weight
+
+import error_stats
+from preprocess import preprocess
+from select_sample import training_sample
+
+stats_all = []
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
 
-def get_list_tokens(string):
-	sentence_split = nltk.tokenize.sent_tokenize(string)
-	list_tokens = []
-	for sentence in sentence_split:
-		list_tokens_sentence = nltk.tokenize.word_tokenize(sentence)
-		for token in list_tokens_sentence:
-			list_tokens.append(lemmatizer.lemmatize(token).lower())
+t0 = time.time()
 
-	return list_tokens
-
-def remove_stop_words(list_tokens):
-	clean_list_tokens = []
-	for token in list_tokens:
-		if token not in english_stop_words:
-			clean_list_tokens.append(token)
-
-	return clean_list_tokens
-
-def remove_punct(list_tokens):
-	no_punct = [i for i in list_tokens if i not in punct]
-	return no_punct
-
-
-stats_all = []
 for word in words:
-	train_text = pd.read_csv('../CoarseWSD_P2/{}/train.data.txt'.format(word),
-						sep='\t',
-						names=['index', 'sentence'])
-	train_label = pd.read_csv('../CoarseWSD_P2/{}/train.gold.txt'.format(word),
-						sep='\t',
-						names=['label'])
+    train_text = pd.read_csv('../CoarseWSD_P2/{}/train.data.txt'.format(word),
+                             sep='\t',
+                             names=['index', 'sentence'])
+    train_label = pd.read_csv('../CoarseWSD_P2/{}/train.gold.txt'.format(word),
+                              sep='\t',
+                              names=['label'])
 
-	test_text = pd.read_csv('../CoarseWSD_P2/{}/test.data.txt'.format(word),
-						sep='\t',
-						names=['index', 'sentence'])
-	test_label = pd.read_csv('../CoarseWSD_P2/{}/test.gold.txt'.format(word),
-						sep='\t',
-						names=['label'])
+    test_text = pd.read_csv('../CoarseWSD_P2/{}/test.data.txt'.format(word),
+                            sep='\t',
+                            names=['index', 'sentence'])
+    test_label = pd.read_csv('../CoarseWSD_P2/{}/test.gold.txt'.format(word),
+                             sep='\t',
+                             names=['label'])
 
+    # merge train date with labels data in one table
+    train = pd.merge(train_text, train_label, left_index=True, right_index=True)
+    test = pd.merge(test_text, test_label, left_index=True, right_index=True)
 
-	# merge train date with labels data in one table
-	train = pd.merge(train_text, train_label, left_index=True, right_index=True)
-	test = pd.merge(test_text, test_label, left_index=True, right_index=True)
+    # get class weights
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                      np.unique(train.label),
+                                                      train.label)
 
+    # if there are enough training samples, even the label ratios out
+    if train.shape[0] > 1000:
+        train = training_sample(train)
 
-	# preprocess the sentences
-	# shouldnt matter too much as tfidf should assign low scores to stop words
-	for i in range(0, len(train.sentence)):
-		sentence_tokens = get_list_tokens(train.sentence[i])
-		rm_st = remove_stop_words(sentence_tokens)
-		rm_punct = remove_punct(rm_st)
-		# update cell
-		train.at[i,'sentence']=' '.join(rm_punct)
+    # preprocess the sentences
+    # does not matter too much as tfidf assigns low scores to stop words
+    train['sentence'] = preprocess(train)
+    test['sentence'] = preprocess(test)
 
-	for i in range(0, len(test.sentence)):
-		sentence_tokens = get_list_tokens(test.sentence[i])
-		rm_st = remove_stop_words(sentence_tokens)
-		rm_punct = remove_punct(rm_st)
-		# update cell
-		test.at[i,'sentence']=' '.join(rm_punct)
+    list_rows = train['sentence'].tolist()
+    vectorizer = TfidfVectorizer()
+    # if there are more than 1000 training samples, limit the max_features to 1000
+    if train.shape[0] > 1000:
+        vectorizer.max_features = 1000
 
+    # fit only
+    X = vectorizer.fit(list_rows)
 
+    knn = KNeighborsClassifier(n_neighbors=3)
+    knn.fit(X.transform(list_rows).todense(), train.label)
 
-	list_rows = train['sentence'].tolist()
-	vectorizer = TfidfVectorizer()
-	# fit only
-	X = vectorizer.fit(list_rows)
+    prediction = knn.predict(X.transform(test.sentence).todense())
 
-	# kkn(xtrain, ytarin)
-	# knn = KNeighborsClassifier(n_neighbors=len(train.label.unique()))
-	knn = KNeighborsClassifier(n_neighbors=3)
+    # get the confusion matrix
+    ax = error_stats.format_conf_matrix(train, test, prediction, word, words)
+    # get stats (accuracy, precision etc)
+    stats = error_stats.get_stats(test.label, prediction)
+    stats_all.append(stats)
 
-	knn.fit(X.transform(list_rows).todense(), train.label)
-	prediction = []
-	# print(knn)
+t1 = time.time()
 
-	for sentence in test.sentence:
-		p = knn.predict(X.transform([sentence]).todense())
-		# convert from numpy nd array to int
-		prediction.append(int(p[0]))
-
-	accuracy = accuracy_score(test.label, prediction)
-	precision, recall, fscore, support = precision_recall_fscore_support(test.label, prediction, average='macro', zero_division=0)
-	stats = [accuracy, precision, recall, fscore]
-	stats_all.append(stats)
-	print(word)
-	print(accuracy)
-
+print('Time it took: {}'.format(t1 - t0))
 df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
 print(df)
+plt.show()
