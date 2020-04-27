@@ -32,7 +32,6 @@ def remove_punct(list_tokens):
     # no_punct = [i = re.sub(r'[^\w\s]', '', i) for i in list_tokens if i == True]
     return no_punct
 
-
 def preprocess(df):
     df['sentence'] = df.apply(lambda x: ' '.join(
         # remove_punct(
