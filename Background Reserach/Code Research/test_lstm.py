@@ -56,7 +56,7 @@ for word in words:
     # Highest sentence length within training data set  - 100
     MAX_SEQUENCE_LENGTH = train.sentence.map(len).max() - 100
     EMBEDDING_DIM = 100
-    tokenizer = Tokenizer(num_words=MAX_NB_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
+    tokenizer = Tokenizer(num_words=MAX_NB_WORDS, lower=True)
     tokenizer.fit_on_texts(train['sentence'].values)
     word_index = tokenizer.word_index
 
@@ -83,7 +83,7 @@ for word in words:
     epochs = 30
     batch_size = 30
 
-    history = model.fit(X_, pd.get_dummies(train['label']).values, #pd.get_dummies(train['label']).values
+    history = model.fit(X_, pd.get_dummies(train['label']).values,
                         class_weight=class_weights,
                         epochs=epochs,
                         batch_size=batch_size,
@@ -104,6 +104,6 @@ for word in words:
 t1 = time.time()
 
 print('Time it took: {}'.format(t1-t0))
-df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
+df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore', 'rmse'], index=words)
 print(df)
 plt.show()

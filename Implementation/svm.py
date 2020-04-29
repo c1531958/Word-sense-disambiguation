@@ -1,26 +1,19 @@
-import time
-
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.utils import class_weight
-from sklearn.metrics import plot_confusion_matrix
+from sklearn import svm
 
+import time
 import error_stats
 from preprocess import preprocess
 from select_sample import training_sample
 
-from sklearn.utils import class_weight
-
-
-stats_all = []
+import matplotlib.pyplot as plt
 
 words = ['hood', 'java', 'mole', 'pitcher', 'pound', 'seal', 'spring', 'square', 'trunk', 'yard']
-words=['pitcher']
+
 t0 = time.time()
 
+stats_all = []
 for word in words:
     train_text = pd.read_csv('../CoarseWSD_P2/{}/train.data.txt'.format(word),
                              sep='\t',
@@ -35,44 +28,26 @@ for word in words:
     test_label = pd.read_csv('../CoarseWSD_P2/{}/test.gold.txt'.format(word),
                              sep='\t',
                              names=['label'])
-
-    # merge train date with labels data in one table
     train = pd.merge(train_text, train_label, left_index=True, right_index=True)
     test = pd.merge(test_text, test_label, left_index=True, right_index=True)
-
-    # get class weights
-    # class_weights = class_weight.compute_class_weight('balanced',
-    #                                                   np.unique(train.label),
-    #                                                   train.label)
-    # print(class_weights)
+    train['sentence'] = preprocess(train)
+    test['sentence'] = preprocess(test)
 
     # if there are enough training samples, even the label ratios out
     if train.shape[0] > 1000:
         train = training_sample(train)
 
-    # preprocess the sentences
-    # does not matter too much as tfidf assigns low scores to stop words
-    train['sentence'] = preprocess(train)
-    test['sentence'] = preprocess(test)
-
     list_rows = train['sentence'].tolist()
-    vectorizer = TfidfVectorizer()
-    # if there are more than 1000 training samples, limit the max_features to 1000
-    if train.shape[0] > 1000:
-        vectorizer.max_features = 1000
+    vectorizer = TfidfVectorizer(max_features=1000)
+    X = vectorizer.fit_transform(list_rows)
+    X = X.toarray()
+    SVM_analysis = svm.SVC(C=1.0, kernel='linear', degree=3, gamma='auto', class_weight='balanced')
+    SVM_analysis.fit(X,train.label)
 
-    # fit only
-    X = vectorizer.fit(list_rows)
-
-    # get class weights
-    class_weights = class_weight.compute_class_weight('balanced',
-                                                      np.unique(train.label),
-                                                      train.label)
-
-    knn = KNeighborsClassifier(n_neighbors=3)
-    knn.fit(X.transform(list_rows).todense(), train.label)
-
-    prediction = knn.predict(X.transform(test.sentence).todense())
+    test_rows = test['sentence'].tolist()
+    Y = vectorizer.transform(test_rows)
+    Y = Y.toarray()
+    prediction = SVM_analysis.predict(Y)
 
     # get the confusion matrix
     ax = error_stats.format_conf_matrix(train, test, prediction, word, words)
@@ -81,8 +56,8 @@ for word in words:
     stats_all.append(stats)
 
 t1 = time.time()
-
 print('Time it took: {}'.format(t1 - t0))
-df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore'], index=words)
+
+df = pd.DataFrame(stats_all, columns=['accuracy', 'precision', 'recall', 'fscore', 'rmse'], index=words)
 print(df)
 plt.show()
