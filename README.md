@@ -26,7 +26,7 @@ NOTE. Depending on the operating system and Python version, you might need to sp
 # Background Research/Code Research 
 This folder contains other code snippets to test other classifiers such as knn, naive bayes and random forest.
 
-#Misc
+# Misc
 This folder contains code snippets to acquire data used in  data analyses and code to plot Pearson Correlation graphs.
 
 
