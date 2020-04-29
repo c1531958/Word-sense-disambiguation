@@ -1,8 +1,6 @@
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn import svm
-from sklearn.metrics import mean_squared_error
-from math import sqrt
 
 import time
 import error_stats

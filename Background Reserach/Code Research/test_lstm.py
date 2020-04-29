@@ -56,7 +56,7 @@ for word in words:
     # Highest sentence length within training data set  - 100
     MAX_SEQUENCE_LENGTH = train.sentence.map(len).max() - 100
     EMBEDDING_DIM = 100
-    tokenizer = Tokenizer(num_words=MAX_NB_WORDS, filters='!"#$%&()*+,-./:;<=>?@[\]^_`{|}~', lower=True)
+    tokenizer = Tokenizer(num_words=MAX_NB_WORDS, lower=True)
     tokenizer.fit_on_texts(train['sentence'].values)
     word_index = tokenizer.word_index
 

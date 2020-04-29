@@ -1,0 +1,8 @@
+gensim
+matplotlib
+numpy==1.16.4
+nltk
+pandas
+keras==2.1.5
+sklearn
+tensorflow==1.5
